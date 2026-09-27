@@ -1,111 +1,37 @@
-import com.sun.net.httpserver.HttpExchange;
 import com.sun.net.httpserver.HttpServer;
-
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
+import com.sun.net.httpserver.HttpHandler;
+import com.sun.net.httpserver.HttpExchange;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.net.InetSocketAddress;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public class Main {
+    private static final Logger logger = LoggerFactory.getLogger(Main.class);
 
-    private static final Logger log =
-            LoggerFactory.getLogger(Main.class);
-
-    public static void main(String[] args) throws Exception {
-
+    public static void main(String[] args) throws IOException {
         int port = 8080;
-
-        HttpServer server =
-                HttpServer.create(
-                        new InetSocketAddress("0.0.0.0", port),
-                        0
-                );
-
-        server.createContext("/", Main::handleRoot);
-        server.createContext("/error", Main::handleError);
-
+        HttpServer server = HttpServer.create(new InetSocketAddress(port), 0);
+        
+        server.createContext("/api/hello", new HttpHandler() {
+            @Override
+            public void handle(HttpExchange exchange) throws IOException {
+                // Nhờ OTel Java Agent, dòng log này sẽ tự động được đính kèm trace_id và span_id!
+                logger.info("Java App received request from Node.js on /api/hello");
+                
+                String response = "{\"message\": \"Hello from Java App!\", \"status\": \"success\"}";
+                exchange.getResponseHeaders().set("Content-Type", "application/json");
+                exchange.sendResponseHeaders(200, response.getBytes().length);
+                
+                try (OutputStream os = exchange.getResponseBody()) {
+                    os.write(response.getBytes());
+                }
+            }
+        });
+        
         server.setExecutor(null);
-
         server.start();
-
-        log.info(
-                "Java application started on port {}",
-                port
-        );
-    }
-
-    private static void handleRoot(
-            HttpExchange exchange
-    ) throws IOException {
-
-        log.info(
-                "Java application received request method={} path={}",
-                exchange.getRequestMethod(),
-                exchange.getRequestURI().getPath()
-        );
-
-        String response = """
-                {
-                  "service": "java-otel-demo",
-                  "status": "ok"
-                }
-                """;
-
-        sendResponse(
-                exchange,
-                200,
-                response
-        );
-    }
-
-    private static void handleError(
-            HttpExchange exchange
-    ) throws IOException {
-
-        log.error(
-                "Simulated Java application error errorType=DemoException"
-        );
-
-        String response = """
-                {
-                  "service": "java-otel-demo",
-                  "error": "simulated"
-                }
-                """;
-
-        sendResponse(
-                exchange,
-                500,
-                response
-        );
-    }
-
-    private static void sendResponse(
-            HttpExchange exchange,
-            int status,
-            String body
-    ) throws IOException {
-
-        byte[] bytes =
-                body.getBytes();
-
-        exchange.getResponseHeaders()
-                .set(
-                        "Content-Type",
-                        "application/json"
-                );
-
-        exchange.sendResponseHeaders(
-                status,
-                bytes.length
-        );
-
-        try (OutputStream output =
-                     exchange.getResponseBody()) {
-
-            output.write(bytes);
-        }
+        logger.info("Java application started on port " + port);
     }
 }

@@ -159,6 +159,36 @@ const server = http.createServer((req, res) => {
         return;
     }
 
+    if (req.url === "/chain") {
+        emitLog(
+            SeverityNumber.INFO,
+            "INFO",
+            "Calling another service to create distributed trace",
+            { endpoint: "/chain" }
+        );
+
+        // OpenTelemetry HttpInstrumentation automatically creates a child span
+        // for this outgoing request and injects the 'traceparent' header!
+        const outgoingReq = http.get("http://java-app:8080/api/hello", (clientRes) => {
+            let data = "";
+            clientRes.on("data", (chunk) => { data += chunk; });
+            clientRes.on("end", () => {
+                res.writeHead(200, { "Content-Type": "application/json" });
+                res.end(JSON.stringify({
+                    message: "Called another service successfully",
+                    downstream_response: JSON.parse(data)
+                }));
+            });
+        });
+
+        outgoingReq.on("error", (err) => {
+            res.writeHead(500, { "Content-Type": "application/json" });
+            res.end(JSON.stringify({ error: err.message }));
+        });
+
+        return;
+    }
+
     emitLog(
         SeverityNumber.WARN,
         "WARN",

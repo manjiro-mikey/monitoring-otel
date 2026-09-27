@@ -43,6 +43,7 @@ const tracerProvider = new NodeTracerProvider({
 tracerProvider.register();
 
 registerInstrumentations({
+  tracerProvider,
   instrumentations: [
     new HttpInstrumentation()
   ]

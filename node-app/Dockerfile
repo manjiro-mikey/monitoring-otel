@@ -13,4 +13,4 @@ ENV NODE_ENV=production
 
 EXPOSE 3001
 
-CMD ["node", "--import", "./otel-tracing.mjs", "app.mjs"]
+CMD ["node", "--import", "@opentelemetry/instrumentation/hook.mjs", "--import", "./otel-tracing.mjs", "app.mjs"]

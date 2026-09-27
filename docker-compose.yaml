@@ -1,0 +1,55 @@
+services:
+
+  node-app:
+    container_name: node-otel-demo
+    build:
+      context: ./node-app
+
+    restart: unless-stopped
+
+    ports:
+      - "3001:3001"
+    mem_limit: 256m
+    cpus: "0.5"
+    environment:
+      OTEL_SERVICE_NAME: node-otel-demo
+      MONITORING_PRIVATE_IP: ${MONITORING_PRIVATE_IP}
+      OTEL_AUTH_B64: ${OTEL_AUTH_B64}
+
+  java-app:
+    container_name: java-otel-demo
+    build:
+      context: ./java-app
+
+    restart: unless-stopped
+
+    ports:
+      - "8080:8080"
+    mem_limit: 384m
+    cpus: "0.5"
+    environment:
+      
+      JAVA_TOOL_OPTIONS: "-Xms64m -Xmx256m"
+      OTEL_SERVICE_NAME: java-otel-demo
+
+      OTEL_RESOURCE_ATTRIBUTES: >
+        service.version=1.0.0,
+        deployment.environment.name=lab
+
+      OTEL_LOGS_EXPORTER: otlp
+
+      OTEL_EXPORTER_OTLP_LOGS_ENDPOINT: >
+        http://${MONITORING_PRIVATE_IP}:8427/insert/opentelemetry/v1/logs
+
+      OTEL_EXPORTER_OTLP_LOGS_PROTOCOL: http/protobuf
+
+      OTEL_EXPORTER_OTLP_LOGS_HEADERS: >
+        Authorization=Basic ${OTEL_AUTH_B64},
+        VL-Stream-Fields=service.name
+
+      OTEL_TRACES_EXPORTER: none
+      OTEL_METRICS_EXPORTER: none
+
+      OTEL_INSTRUMENTATION_LOGBACK_APPENDER_ENABLED: "true"
+
+      OTEL_LOG_LEVEL: info

@@ -7,9 +7,10 @@ COPY package.json .
 RUN npm install --omit=dev
 
 COPY app.mjs .
+COPY otel-tracing.mjs .
 
 ENV NODE_ENV=production
 
 EXPOSE 3001
 
-CMD ["npm", "start"]
+CMD ["node", "--import", "./otel-tracing.mjs", "app.mjs"]

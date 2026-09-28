@@ -1,9 +1,12 @@
 import Pyroscope from "@pyroscope/nodejs";
 
+const monitoringIp =
+    process.env.MONITORING_PRIVATE_IP;
+
 Pyroscope.init({
   serverAddress:
     process.env.PYROSCOPE_SERVER_ADDRESS ||
-    "http://172.31.9.5:4040",
+    "http://${monitoringIp}:4040",
 
   appName:
     process.env.OTEL_SERVICE_NAME ||

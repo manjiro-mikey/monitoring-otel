@@ -672,11 +672,11 @@ Ví dụ:
 
     [[outputs.influxdb]]
       urls = [
-        "http://172.31.9.5:8427/write"
+        "http://172.31.9.5:8427"
       ]
 
-      username = "telegraf"
-      password = "YOUR_TELEGRAF_PASSWORD"
+      username = "agent_metrics"
+      password = "CHANGE_ME_AGENT_METRICS"
 
       database = "victoriametrics"
 

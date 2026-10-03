@@ -442,6 +442,7 @@ Thêm cấu hình parsers
     sudo vi /etc/fluent-bit/parsers.conf
 
 Nội dung:
+
     [PARSER]
         Name        app_json
         Format      json
@@ -459,7 +460,7 @@ Check:
 
 ------------------------------------------------------------------------
 
-# 18. Fluent Bit khác Vector ở đâu?
+# 18. Fluent Bit khác Vector ở đâu? Cân nhắc sử dụng một trong 2 vì cả 2 đều dùng để collection logs
 
 Sau khi triển khai:
 
@@ -497,7 +498,7 @@ Sau đó:
 
 ------------------------------------------------------------------------
 
-# 19. Cài Fluentd
+# 19. Cài Fluentd(Optional -> vector có thể thay thế nếu muốn có một pipeline processing/routing phức tạp)
 
 Đối với Fluentd, hiện tại **không nên dùng `td-agent`** vì các bản
 td-agent cũ đã EOL. Fluentd hiện cung cấp `fluent-package`; tài liệu

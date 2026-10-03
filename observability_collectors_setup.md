@@ -878,9 +878,32 @@ Ví dụ:
 
 
     [[inputs.diskio]]
+    
+    [[inputs.system]]
 
-
+    # Lấy metric về tiến trình (processes_zombies, processes_total, processes_total_threads, processes_running)
+    [[inputs.processes]]
+    
+    # Lấy metric về bộ nhớ Swap (swap_used_percent)
+    [[inputs.swap]]
+    
+    # Lấy metric Kernel (kernel_context_switches, kernel_processes_forked)
+    [[inputs.kernel]]
+    
+    # Lấy metric thông số file system kernel (linux_sysctl_fs_file-max)
+    [[inputs.linux_sysctl_fs]]
+    
+    # Lấy metric về ngắt hệ thống (interrupts_total)
+    [[inputs.interrupts]]
+    
+    # 7. Theo dõi kết nối IP Conntrack (conntrack_ip_conntrack_count / conntrack_nf_conntrack_count)
+    [[inputs.conntrack]]
+    
+    # 8. Card mạng & Lưu lượng (net_bytes_recv, net_bytes_sent...)
     [[inputs.net]]
+    
+    # 9. Thống kê mạng Kernel / UDP (nstat_UdpInDatagrams...)
+    [[inputs.nstat]]
 
 Sau đó output về VictoriaMetrics.
 

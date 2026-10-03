@@ -398,7 +398,7 @@ Ví dụ:
         Flush        1
         Daemon       Off
         Log_Level    info
-
+        Parsers_File /etc/fluent-bit/parsers.conf
 
     [INPUT]
         Name              tail
@@ -406,28 +406,48 @@ Ví dụ:
         Tag               application
         Read_from_Head    Off
         DB                /var/lib/fluent-bit/app.db
+        Parser            app_json
+        Path_Key          source
 
+    [FILTER]
+        Name              nest
+        Match             application
+        Operation         lift
+        Nested_under      log
 
     [FILTER]
         Name    modify
         Match   application
-
         Add     service application
         Add     environment lab
 
+    [FILTER]
+        Name              record_modifier
+        Match             application
+        Record            host ${HOSTNAME}
 
     [OUTPUT]
         Name              http
-        Match             *
+        Match             application
         Host              172.31.9.5
         Port              8427
-        URI               /insert/jsonline?_stream_fields=host,source&_msg_field=message
+        URI               /insert/jsonline?_stream_fields=host,service,environment&_msg_field=message
         Format            json_lines
-
         HTTP_User         vector_logs
         HTTP_Passwd       YOUR_VECTOR_LOGS_PASSWORD
 
         Compress          gzip
+
+Thêm cấu hình parsers
+    sudo vi /etc/fluent-bit/parsers.conf
+
+Nội dung:
+    [PARSER]
+        Name        app_json
+        Format      json
+        Time_Key    timestamp
+        Time_Format %Y-%m-%d %H:%M:%S.%L
+        Time_Keep   On
 
 Sau đó:
 

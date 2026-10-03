@@ -449,6 +449,12 @@ Nội dung:
         Time_Key    timestamp
         Time_Format %Y-%m-%d %H:%M:%S.%L
         Time_Keep   On
+Tạo folder để lưu /var/lib/fluent-bit/app.db -> restart sẽ không lấy log lại từ đầu. Kiểm tra user đang chạy nếu không thấy User/Group -> systemd dùng root
+
+    systemctl show fluent-bit -p User -p Group
+    sudo mkdir -p /var/lib/fluent-bit
+    sudo chown root:root /var/lib/fluent-bit
+    sudo chmod 755 /var/lib/fluent-bit
 
 Sau đó:
 

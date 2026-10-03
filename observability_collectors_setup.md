@@ -439,6 +439,7 @@ Ví dụ:
         Compress          gzip
 
 Thêm cấu hình parsers
+
     sudo vi /etc/fluent-bit/parsers.conf
 
 Nội dung:
@@ -463,6 +464,198 @@ Sau đó:
 Check:
 
     sudo journalctl -u fluent-bit -f
+
+Cấu hình thu thập log của container -> thêm docker_metadata.lua : 
+
+     sudo nano  /etc/fluent-bit/docker_metadata.lua
+
+Nội dung: 
+
+    local metadata_cache = {}
+
+    function add_container_name(tag, timestamp, record)
+    
+        local source = record["source"]
+    
+        if source == nil then
+            return 1, timestamp, record
+        end
+    
+        -- Docker json-file path:
+        --
+        -- /var/lib/docker/containers/<container_id>/<container_id>-json.log
+        --
+        local container_id = string.match(
+            source,
+            "/containers/([a-f0-9]+)/[a-f0-9]+%-json%.log"
+        )
+    
+        if container_id == nil then
+            return 1, timestamp, record
+        end
+    
+        -- Use cache if we already know this container
+        if metadata_cache[container_id] ~= nil then
+            record["container_name"] = metadata_cache[container_id]
+            return 1, timestamp, record
+        end
+    
+        -- Query Docker API
+        local command = string.format(
+            "curl --silent --unix-socket /var/run/docker.sock http://localhost/containers/%s/json",
+            container_id
+        )
+    
+        local handle = io.popen(command)
+    
+        if handle == nil then
+            return 1, timestamp, record
+        end
+    
+        local response = handle:read("*a")
+        handle:close()
+    
+        if response == nil or response == "" then
+            return 1, timestamp, record
+        end
+    
+        -- Docker API:
+        -- "Name": "/grafana"
+        local container_name = string.match(
+            response,
+            '"Name"%s*:%s*"([^"]+)"'
+        )
+    
+        if container_name ~= nil then
+    
+            -- Remove leading /
+            container_name = string.gsub(
+                container_name,
+                "^/",
+                ""
+            )
+    
+            metadata_cache[container_id] = container_name
+    
+            record["container_name"] = container_name
+    
+        end
+    
+        return 1, timestamp, record
+    end
+
+Sửa cấu hình fluent-bit.conf
+
+    sudo nano /etc/fluent-bit/fluent-bit.conf
+
+Nội dung:
+
+    [SERVICE]
+        Flush        1
+        Daemon       Off
+        Log_Level    info
+        Parsers_File /etc/fluent-bit/parsers.conf
+    
+    # =========================================================
+    # Application logs
+    # =========================================================
+    
+    [INPUT]
+        Name              tail
+        Path              /var/log/apps/*.log
+        Tag               application
+        Read_from_Head    Off
+        DB                /var/lib/fluent-bit/app.db
+        Parser            app_json
+        Path_Key          source
+    
+    [FILTER]
+        Name              nest
+        Match             application
+        Operation         lift
+        Nested_under      log
+    
+    [FILTER]
+        Name              modify
+        Match             application
+        Add               service application
+        Add               environment lab
+    
+    [FILTER]
+        Name              record_modifier
+        Match             application
+        Record            host ${HOSTNAME}
+    
+    # =========================================================
+    # Docker container logs
+    # =========================================================
+    
+    [INPUT]
+        Name              tail
+        Path              /var/lib/docker/containers/*/*-json.log
+        Tag               docker.*
+        Read_from_Head    Off
+        DB                /var/lib/fluent-bit/docker.db
+        Parser            docker
+        Path_Key          source
+        Rotate_Wait       30
+        Mem_Buf_Limit     50MB
+        Skip_Long_Lines   On
+    
+    
+    # =========================================================
+    # Docker metadata
+    # =========================================================
+    [FILTER]
+        Name              modify
+        Match             docker.*
+        Copy              log message
+    
+    [FILTER]
+        Name              lua
+        Match             docker.*
+        Script            /etc/fluent-bit/docker_metadata.lua
+        Call              add_container_name
+    
+    [FILTER]
+        Name              modify
+        Match             docker.*
+        Add               environment lab
+    
+    [FILTER]
+        Name              record_modifier
+        Match             docker.*
+        Record            host ${HOSTNAME}
+    
+    # =========================================================
+    # Send application logs
+    # =========================================================
+    
+    [OUTPUT]
+        Name              http
+        Match             application
+        Host              172.31.17.83
+        Port              8427
+        URI               /insert/jsonline?_stream_fields=host,service,environment&_msg_field=message
+        Format            json_lines
+        HTTP_User         vector_logs
+        HTTP_Passwd       YOUR_VECTOR_LOGS_PASSWORD
+        Compress          gzip
+    
+    
+    # =========================================================
+    # Send Docker logs
+    # =========================================================
+    [OUTPUT]
+        Name              http
+        Match             docker.*
+        Host              172.31.17.83
+        Port              8427
+        URI               /insert/jsonline?_stream_fields=host,environment,container_name,stream&_msg_field=message
+        Format            json_lines
+        HTTP_User         vector_logs
+        HTTP_Passwd       YOUR_VECTOR_LOGS_PASSWORD
+        Compress          gzip
 
 ------------------------------------------------------------------------
 

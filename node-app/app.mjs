@@ -92,7 +92,12 @@ function emitLog(
     logger.emit({
         severityNumber,
         severityText,
-        body: message,
+        body: JSON.stringify({
+            service: serviceName,
+            level: severityText,
+            message,
+            ...logAttributes
+        }),
         attributes: logAttributes,
         context: context.active()
     });
